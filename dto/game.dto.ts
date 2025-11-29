@@ -1,118 +1,244 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsEnum, IsInt, IsString, IsOptional, Min, ValidateNested, ArrayMinSize, IsBoolean } from 'class-validator';
+// src/game/dto/game.dto.ts
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { CreateLevelRequest } from 'proto/game.pb';
+import {
+  IsArray,
+  IsEnum,
+  IsInt,
+  IsNumber,
+  IsOptional,
+  ValidateNested,
+} from 'class-validator';
+import { BlockGimmickType, ColorType, Difficulty, Direction, ElementType, ObstacleType } from 'proto/game.pb';
 
-export enum ElementType {
-  BLOCKER = 0,
-  POLYOMINOS = 1,
-  EMPTY = 2,
-}
+// ===================== Entities =====================
 
-export enum ElementSubType {
-  BOX_BLOCKER = 0,
-  HYDRANT_BLOCKER = 1,
-}
+export class ObstacleDataDto {
+  @ApiProperty({ enum: ObstacleType, example: ObstacleType.WALL })
+  @IsEnum(ObstacleType)
+  type: ObstacleType;
 
-export class GameElementDto {
-  @ApiProperty({ enum: ElementType, example: ElementType.BLOCKER })
-  @IsEnum(ElementType)
-  elementType: ElementType;
+  @ApiProperty({ enum: Direction, example: Direction.TOP })
+  @IsEnum(Direction)
+  direction: Direction;
 
-  @ApiProperty({ enum: ElementSubType, example: ElementSubType.BOX_BLOCKER })
-  @IsEnum(ElementSubType)
-  elementSubType: ElementSubType;
-
-  @ApiProperty({ example: 2, minimum: 1 })
+  @ApiProperty({ example: 5 })
   @IsInt()
-  @Min(1)
+  x: number;
+
+  @ApiProperty({ example: 3 })
+  @IsInt()
+  y: number;
+
+  @ApiProperty({ type: 'object', additionalProperties: { type: 'string' }, example: { durability: '100' } })
+  meta: Record<string, string>;
+}
+
+export class BlockGimmickDataDto {
+  @ApiProperty({ enum: BlockGimmickType, example: BlockGimmickType.LAYER })
+  @IsEnum(BlockGimmickType)
+  type: BlockGimmickType;
+
+  @ApiProperty({ type: () => [BlockDataDto], example: [] })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => BlockDataDto)
+  blocks: BlockDataDto[];
+
+  @ApiProperty({ example: 1 })
+  @IsInt()
+  count: number;
+}
+
+export class BlockDataDto {
+  @ApiProperty({ example: 2 })
+  @IsInt()
+  type: number;
+
+  @ApiProperty({ enum: ColorType, example: ColorType.RED })
+  @IsEnum(ColorType)
+  color: ColorType;
+
+  @ApiProperty({ example: 4 })
+  @IsInt()
+  x: number;
+
+  @ApiProperty({ example: 5 })
+  @IsInt()
+  y: number;
+
+  @ApiPropertyOptional({ type: () => BlockGimmickDataDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => BlockGimmickDataDto)
+  gimmick?: BlockGimmickDataDto;
+}
+
+export class BlockGroupDataDto {
+  @ApiProperty({ type: [Number], example: [0, 1, 2] })
+  @IsArray()
+  @IsInt({ each: true })
+  indexes: number[];
+}
+
+export class LevelDataDto {
+  @ApiProperty({ example: 10 })
+  @IsInt()
   width: number;
-
-  @ApiProperty({ example: 3, minimum: 1 })
-  @IsInt()
-  @Min(1)
-  height: number;
-
-  @ApiProperty({
-    example: '{"color": "red"}',
-    description: 'string JSON, có thể dùng "{}" nếu không có props'
-  })
-  @IsString()
-  elementProps: string; 
-}
-
-export class GameLevelDataDto {
-  @ApiProperty({ example: 'Game Jelly Crush' })
-  @IsString()
-  gameName: string;
-
-  @ApiProperty({ example: 'game_001' })
-  @IsString()
-  gameId: string;
-
-  @ApiProperty({ example: 'level_001' })
-  @IsString()
-  levelId: string;
 
   @ApiProperty({ example: 10 })
   @IsInt()
+  height: number;
+
+  @ApiProperty({ enum: Difficulty, example: Difficulty.NORMAL })
+  @IsEnum(Difficulty)
+  difficulty: Difficulty;
+
+  @ApiProperty({ type: [BlockDataDto], example: [] })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => BlockDataDto)
+  blocks: BlockDataDto[];
+
+  @ApiProperty({ type: [ObstacleDataDto], example: [] })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ObstacleDataDto)
+  obstacles: ObstacleDataDto[];
+
+  @ApiProperty({ type: [BlockGroupDataDto], example: [] })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => BlockGroupDataDto)
+  groups: BlockGroupDataDto[];
+
+  @ApiProperty({ example: 60 })
+  @IsInt()
+  time_limit: number;
+}
+
+export class Matrix2DDto {
+  @ApiProperty({ example: 3 })
+  @IsInt()
   cols: number;
 
-  @ApiProperty({ example: 12 })
+  @ApiProperty({ example: 3 })
   @IsInt()
   rows: number;
 
-  @ApiProperty({
-    type: [GameElementDto],
-    example: [
-      {
-        elementType: ElementType.BLOCKER,
-        elementSubType: ElementSubType.BOX_BLOCKER,
-        width: 1,
-        height: 2,
-        elementProps: `{'color':'blue','grid':'[[1][1]]'}`
-      }
-    ]
-  })
+  @ApiProperty({ type: [Number], example: [1, 0, 0, 0, 1, 0, 0, 0, 1] })
+  @IsArray()
+  @IsNumber({}, { each: true })
+  values: number[];
+}
+
+// ===================== Requests =====================
+
+export class GetDataLevelRequestDto {
+  @ApiProperty({ example: 1 })
+  @Type(() => Number)
+  @IsInt()
+  id: number;
+}
+
+export class GetDataLevelResponseDto {
+  @ApiProperty({ type: LevelDataDto })
+  @ValidateNested()
+  @Type(() => LevelDataDto)
+  levelData: LevelDataDto;
+}
+
+export class GetMatrixRequestDto {
+  @ApiProperty({ example: 1 })
+  @Type(() => Number)
+  @IsInt()
+  type: number;
+}
+
+export class GetMatrixResponseDto {
+  @ApiProperty({ type: [Matrix2DDto] })
+  @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => GameElementDto)
-  @ArrayMinSize(0)
-  elements: GameElementDto[];
+  @Type(() => Matrix2DDto)
+  matrix: Matrix2DDto[];
 }
 
-export class FindLevelRequestDto {
-  @ApiProperty({ example: 'level_001' })
-  @IsString()
-  levelId: string;
-}
+// ===================== CMS DTO =====================
 
-export class FindLevelResponseDto {
-  @ApiProperty({ type: GameLevelDataDto, required: false })
-  @ValidateNested()
-  @Type(() => GameLevelDataDto)
+export class BlockTypeDto {
+  @ApiProperty({ example: 1 })
+  @IsInt()
+  type: number;
+
+  // name chỉ để Swagger, không validate proto
+  @ApiPropertyOptional({ example: 'Basic Block' })
   @IsOptional()
-  levelData?: GameLevelDataDto;
+  name: string;
+
+  @ApiProperty({ type: [Matrix2DDto], example: [{ cols: 2, rows: 3, values: [0, 1, 1, 1, 1, 0] }] })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => Matrix2DDto)
+  cell_matrix: Matrix2DDto[];
 }
 
-export class CreateLevelRequestDto implements CreateLevelRequest {
-  @ApiProperty({ type: GameLevelDataDto })
+export class ObstacleDataDefaultDto {
+  @ApiProperty({ enum: ObstacleType, example: ObstacleType.WALL })
+  @IsEnum(ObstacleType)
+  type: ObstacleType;
+}
+
+export class SetElementDefaultRequestDto {
+  @ApiProperty({ enum: ElementType, example: ElementType.Block })
+  @Type(() => Number)
+  @IsEnum(ElementType)
+  elementType: ElementType;
+
+  @ApiPropertyOptional({ type: BlockTypeDto })
   @ValidateNested()
-  @Type(() => GameLevelDataDto)
-  levelData: GameLevelDataDto;
+  @Type(() => BlockTypeDto)
+  blocks?: BlockTypeDto;
+
+  @ApiPropertyOptional({ type: ObstacleDataDefaultDto })
+  @ValidateNested()
+  @Type(() => ObstacleDataDefaultDto)
+  obstacles?: ObstacleDataDefaultDto;
+}
+
+export class SetElementDefaultResponseDto {
+  @ApiProperty({ example: true })
+  success: boolean;
+}
+
+export class CreateLevelRequestDto {
+  @ApiProperty({ type: LevelDataDto })
+  @ValidateNested()
+  @Type(() => LevelDataDto)
+  levelData: LevelDataDto;
 }
 
 export class CreateLevelResponseDto {
   @ApiProperty({ example: true })
-  @IsBoolean()
   success: boolean;
+}
 
-  @ApiProperty({ example: 'Level created successfully!' })
-  @IsString()
-  message: string;
+// ===================== Get All Elements =====================
 
-  @ApiProperty({ type: GameLevelDataDto, required: false })
-  @ValidateNested()
-  @Type(() => GameLevelDataDto)
-  @IsOptional()
-  levelData?: GameLevelDataDto;
+export class GetAllElementDefaultRequestDto {
+  @ApiProperty({ enum: ElementType, example: ElementType.Block, description: 'Loại element muốn lấy' })
+  @Type(() => Number)
+  @IsEnum(ElementType)
+  elementType: ElementType;
+}
+
+export class GetAllElementDefaultResponseDto {
+  @ApiPropertyOptional({ type: [BlockTypeDto], description: 'Danh sách Block nếu elementType là Block' })
+  @ValidateNested({ each: true })
+  @Type(() => BlockTypeDto)
+  blocks?: BlockTypeDto[];
+
+  @ApiPropertyOptional({ type: [ObstacleDataDefaultDto], description: 'Danh sách Obstacle nếu elementType là Obstacle' })
+  @ValidateNested({ each: true })
+  @Type(() => ObstacleDataDefaultDto)
+  obstacles?: ObstacleDataDefaultDto[];
 }

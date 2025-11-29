@@ -1,23 +1,26 @@
-import { Controller, Post, Body, UseGuards, Param, Get, Patch, Put, Delete, Query, Req } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBody, ApiQuery, ApiParam } from '@nestjs/swagger';
-import { FindLevelRequestDto, FindLevelResponseDto, CreateLevelRequestDto, CreateLevelResponseDto } from 'dto/game.dto';
+import { Controller, Get, Query, UsePipes, ValidationPipe } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { GameService } from './game.service';
+import { GetDataLevelRequestDto, GetDataLevelResponseDto, GetMatrixRequestDto, GetMatrixResponseDto } from 'dto/game.dto';
 
 @Controller('game')
-@ApiTags('Api Game') 
+@ApiTags('Api Game')
 export class GameController {
   constructor(private readonly gameService: GameService) {}
 
-  @Get('find-level')
-  @ApiOperation({ summary: 'Lấy data của level trong game theo level id' })
-  async findLevel(@Query() query: FindLevelRequestDto) {
-    return this.gameService.handleFindLevel(query);
+  @Get('level')
+  @ApiOperation({ summary: 'Lấy thông tin level theo id' })
+  @ApiQuery({ name: 'id', type: Number, example: 1 })
+  async getLevel(@Query() query: GetDataLevelRequestDto): Promise<GetDataLevelResponseDto> {
+    const levelData = await this.gameService.getDataLevel(query.id);
+    return { levelData };
   }
 
-  @Post('create-level')
-  @ApiOperation({ summary: 'Tạo thêm level data' })
-  @ApiBody({ type:  CreateLevelRequestDto })
-  async createLevel(@Body() body: CreateLevelRequestDto) {
-    return this.gameService.handleCreateLevel(body);
+  @Get('matrix')
+  @ApiOperation({ summary: 'Lấy ma trận của block theo type' })
+  @ApiQuery({ name: 'type', type: Number, example: 1 })
+  async getMatrix(@Query() query: GetMatrixRequestDto): Promise<GetMatrixResponseDto> {
+    const matrix = await this.gameService.getMatrix(query.type);
+    return { matrix };
   }
 }
